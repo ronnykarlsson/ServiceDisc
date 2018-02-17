@@ -7,31 +7,41 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json;
 using ServiceDisc.Models;
+using ServiceDisc.Serialization;
 
 namespace ServiceDisc.Networking.ServiceDiscConnection
 {
-    public class AzureBlobServiceDiscConnection : IServiceDiscConnection
+    public class AzureStorageServiceDiscConnection : IServiceDiscConnection
     {
-        CloudBlobClient _client;
+        CloudBlobClient _blobClient;
+        CloudQueueClient _queueClient;
         string _containerId = "servicedisc";
         string _serviceListDocumentId = "servicelist.txt";
         static TimeSpan ExpireTimeSpan => TimeSpan.FromMinutes(2);
+        public TimeSpan MessagePollingDelay { get; set; } = TimeSpan.FromSeconds(10);
 
         private ConcurrentDictionary<Guid, ServiceInformation> _activeServices = new ConcurrentDictionary<Guid, ServiceInformation>();
+        private ConcurrentDictionary<Type, object> _messageListeners = new ConcurrentDictionary<Type, object>();
         private Task _expirationRefreshTask;
-        private CancellationTokenSource _refreshCancellationTokenSource;
+        private Task _messageListenerTask;
+        private CancellationTokenSource _cancellationTokenSource;
 
-        public AzureBlobServiceDiscConnection(string connectionString)
+        private readonly TypeSerializer _typeSerializer = new TypeSerializer();
+
+        public AzureStorageServiceDiscConnection(string connectionString)
         {
             var storageAccount = CloudStorageAccount.Parse(connectionString);
-            _client = storageAccount.CreateCloudBlobClient();
+            _blobClient = storageAccount.CreateCloudBlobClient();
+            _queueClient = storageAccount.CreateCloudQueueClient();
 
             InitializeAsync().Wait();
 
-            _refreshCancellationTokenSource = new CancellationTokenSource();
-            _expirationRefreshTask = Task.Run(async () => await HandleServiceExpirationAsync(_refreshCancellationTokenSource.Token).ConfigureAwait(false));
+            _cancellationTokenSource = new CancellationTokenSource();
+            _expirationRefreshTask = Task.Run(async () => await HandleServiceExpirationAsync(_cancellationTokenSource.Token).ConfigureAwait(false));
+            _messageListenerTask = Task.Run(async () => await HandleMessageListenersAsync(_cancellationTokenSource.Token).ConfigureAwait(false));
         }
 
         private async Task HandleServiceExpirationAsync(CancellationToken cancellationToken)
@@ -50,7 +60,7 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
 
         private async Task InitializeAsync()
         {
-            var container = _client.GetContainerReference(_containerId);
+            var container = _blobClient.GetContainerReference(_containerId);
             await container.CreateIfNotExistsAsync().ConfigureAwait(false);
 
             var blob = GetServiceBlob();
@@ -85,7 +95,7 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
 
         private CloudBlockBlob GetServiceBlob()
         {
-            var container = _client.GetContainerReference(_containerId);
+            var container = _blobClient.GetContainerReference(_containerId);
             var blob = container.GetBlockBlobReference(_serviceListDocumentId);
             return blob;
         }
@@ -217,16 +227,83 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
             return serviceList;
         }
 
+        public Task SendMessageAsync<T>(T message) where T : class
+        {
+            return SendMessageAsync(message, TimeSpan.FromMinutes(1));
+        }
+
+        public async Task SendMessageAsync<T>(T message, TimeSpan timeToLive)
+        {
+            var queueReference = _queueClient.GetQueueReference(GetQueueName(typeof(T)));
+            await queueReference.CreateIfNotExistsAsync().ConfigureAwait(false);
+            var textMessage = _typeSerializer.Serialize(message);
+            var queueMessage = new CloudQueueMessage(textMessage);
+            await queueReference.AddMessageAsync(queueMessage, timeToLive, null, new QueueRequestOptions(), new OperationContext()).ConfigureAwait(false);
+        }
+
+        public async Task SubscribeAsync<T>(Action<T> callback) where T : class
+        {
+            var queueReference = _queueClient.GetQueueReference(GetQueueName(typeof(T)));
+            await queueReference.CreateIfNotExistsAsync().ConfigureAwait(false);
+            _messageListeners.TryAdd(typeof(T), callback);
+        }
+
+        private async Task HandleMessageListenersAsync(CancellationToken cancellationToken)
+        {
+            while (true)
+            {
+                if (cancellationToken.IsCancellationRequested) return;
+
+                var processedMessages = 0;
+
+                foreach (var messageType in _messageListeners.Keys.ToArray())
+                {
+                    if (_messageListeners.TryGetValue(messageType, out object callback))
+                    {
+                        var queueReference = _queueClient.GetQueueReference(GetQueueName(messageType));
+                        var message = await queueReference.GetMessageAsync().ConfigureAwait(false);
+                        if (message != null)
+                        {
+                            var deserializedMessage = _typeSerializer.Deserialize(message.AsString, messageType);
+                            var methodInfo = callback.GetType().GetMethod("Invoke");
+                            methodInfo.Invoke(callback, new[] {deserializedMessage});
+                            await queueReference.DeleteMessageAsync(message);
+                            processedMessages++;
+                        }
+                    }
+
+                    if (cancellationToken.IsCancellationRequested) return;
+                }
+
+                if (processedMessages == 0)
+                {
+                    await Task.Delay(MessagePollingDelay, cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+
+        private string GetQueueName(Type messageType)
+        {
+            var queueName = messageType.FullName.Replace(".", "-").ToLowerInvariant();
+
+            if (queueName.Length < 3)
+            {
+                queueName = queueName + "-q";
+            }
+            else if (queueName.Length > 63)
+            {
+                queueName = queueName.Substring(queueName.Length - 63, 63);
+                queueName.Trim('-');
+            }
+
+            return queueName;
+        }
+
         public void Dispose()
         {
-            _refreshCancellationTokenSource.Cancel();
-            try
-            {
-                _expirationRefreshTask?.Dispose();
-            }
-            catch (Exception)
-            {
-            }
+            _cancellationTokenSource.Cancel();
+            _expirationRefreshTask?.Dispose();
+            _messageListenerTask?.Dispose();
         }
     }
 }

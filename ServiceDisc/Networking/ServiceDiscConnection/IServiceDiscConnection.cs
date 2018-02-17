@@ -12,5 +12,7 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
         Task RegisterAsync(ServiceInformation serviceInformation);
         Task UnregisterAsync(Guid id);
         Task<ServiceListDocument> GetServiceListAsync();
+        Task SendMessageAsync<T>(T message) where T : class;
+        Task SubscribeAsync<T>(Action<T> callback) where T : class;
     }
 }

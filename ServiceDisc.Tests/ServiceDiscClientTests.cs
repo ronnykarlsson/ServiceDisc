@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using ServiceDisc.Networking.ServiceDiscConnection;
 using Xunit;
 
@@ -281,6 +280,52 @@ namespace ServiceDisc.Tests
             }
         }
 
+        public class SendAsyncMethod
+        {
+            [Fact]
+            public void SendsMessageToQueue()
+            {
+                var connection = CreateConnection();
+                var client = new ServiceDiscClient(connection);
+                client.SendAsync(new TestMessage1 { SomeData = "123"}).Wait();
+            }
+        }
+
+        public class SubscribeAsyncMethod
+        {
+            [Fact]
+            public void ListenToIncomingMessages()
+            {
+                var resetEvent = new ManualResetEventSlim();
+                var connection = CreateConnection();
+                var client = new ServiceDiscClient(connection);
+
+                client.SubscribeAsync<TestMessage1>(m => { if (m?.SomeData == "123") resetEvent.Set(); }).Wait();
+                client.SendAsync(new TestMessage1 { SomeData = "123" }).Wait();
+
+                resetEvent.Wait(TimeSpan.FromSeconds(5));
+                Assert.True(resetEvent.IsSet);
+            }
+
+            [Fact]
+            public void ReceiveMessagesByType()
+            {
+                var resetEvent1 = new ManualResetEventSlim();
+                var resetEvent2 = new ManualResetEventSlim();
+                var connection = CreateConnection();
+                var client = new ServiceDiscClient(connection);
+
+                client.SubscribeAsync<TestMessage2>(m => { if (m?.SomeData == "123") resetEvent2.Set(); }).Wait();
+                client.SubscribeAsync<TestMessage1>(m => { if (m?.SomeData == "123") resetEvent1.Set(); }).Wait();
+                client.SendAsync(new TestMessage1 { SomeData = "123" }).Wait();
+
+                resetEvent1.Wait(TimeSpan.FromSeconds(5));
+                resetEvent2.Wait(TimeSpan.FromSeconds(1));
+                Assert.True(resetEvent1.IsSet);
+                Assert.False(resetEvent2.IsSet);
+            }
+        }
+
         public interface ITestService
         {
             int AddNumbers(int num1, int num2);
@@ -292,6 +337,16 @@ namespace ServiceDisc.Tests
             {
                 return num1 + num2;
             }
+        }
+
+        public class TestMessage1
+        {
+            public string SomeData { get; set; }
+        }
+
+        public class TestMessage2
+        {
+            public string SomeData { get; set; }
         }
     }
 }

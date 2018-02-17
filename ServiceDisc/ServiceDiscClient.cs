@@ -142,6 +142,25 @@ namespace ServiceDisc
             return proxyType;
         }
 
+        /// <summary>
+        /// Send message <typeparamref name="T"/> to listeners.
+        /// </summary>
+        /// <typeparam name="T">Type of message to send.</typeparam>
+        public async Task SendAsync<T>(T message) where T : class
+        {
+            await _connection.SendMessageAsync(message).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Subscribe to messages of type <typeparamref name="T"/>
+        /// </summary>
+        /// <typeparam name="T">Type of message to listen to.</typeparam>
+        /// <param name="callback">Callback for when message arrives.</param>
+        public Task SubscribeAsync<T>(Action<T> callback) where T : class
+        {
+            return _connection.SubscribeAsync(callback);
+        }
+
         private T CreateServiceProxy<T>(ServiceInformation[] services) where T : class
         {
             var serviceDiscCollection = new ServiceDiscCollection(services);

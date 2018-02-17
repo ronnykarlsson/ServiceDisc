@@ -43,5 +43,18 @@ namespace ServiceDisc
         /// <paramref name="name">Name of service to resolve.</paramref>
         /// <returns>Proxy for communicating with the service.</returns>
         Task<T> GetAsync<T>(string name) where T : class;
+
+        /// <summary>
+        /// Send message <typeparamref name="T"/> to listeners.
+        /// </summary>
+        /// <typeparam name="T">Type of message to send.</typeparam>
+        Task SendAsync<T>(T message) where T : class;
+
+        /// <summary>
+        /// Subscribe to messages of type <typeparamref name="T"/>
+        /// </summary>
+        /// <typeparam name="T">Type of message to listen to.</typeparam>
+        /// <param name="callback">Callback for when message arrives.</param>
+        Task SubscribeAsync<T>(Action<T> callback) where T : class;
     }
 }

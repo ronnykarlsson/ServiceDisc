@@ -23,7 +23,7 @@ namespace TestConsole
             }
 
             var client = await serviceDisc.GetAsync<IHelloService>();
-            Console.WriteLine($"Hello: {client.Hello("john")}");
+            Console.WriteLine($"Hello: {client.Hello("John")}");
             Console.WriteLine($"Add: {client.Add(3, 5)}");
 
             var complexObject = new ComplexHello();
@@ -38,11 +38,13 @@ namespace TestConsole
             var namedService = new HelloService("Named service");
             await serviceDisc.HostAsync<IHelloService>(namedService, serviceName);
             var namedServiceClient = await serviceDisc.GetAsync<IHelloService>(serviceName);
-            Console.WriteLine($"Hello: {namedServiceClient.Hello("john")}");
+            Console.WriteLine($"Hello: {namedServiceClient.Hello("John")}");
 
-            serviceDisc.Dispose();
+            await serviceDisc.SubscribeAsync<HelloMessage>(message => Console.WriteLine($"Hello from {message.Name}"));
+            await serviceDisc.SendAsync(new HelloMessage { Name = "John" });
 
             Console.ReadLine();
+            serviceDisc.Dispose();
         }
     }
 }
