@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Threading;
 using Castle.DynamicProxy;
 using ServiceDisc.Models;
+using ServiceDisc.Networking.QueueService;
+using ServiceDisc.Networking.ServiceDiscConnection;
 using ServiceDisc.Networking.WebApi;
 
 namespace ServiceDisc.Networking
@@ -13,11 +15,13 @@ namespace ServiceDisc.Networking
     internal class ServiceProxy : IInterceptor
     {
         private readonly ServiceDiscCollection _serviceCollection;
+        private readonly IServiceDiscConnection _connection;
         private readonly TimeSpan _timeoutTimeSpan;
 
-        public ServiceProxy(ServiceDiscCollection serviceCollection, TimeSpan timeout)
+        public ServiceProxy(ServiceDiscCollection serviceCollection, IServiceDiscConnection connection, TimeSpan timeout)
         {
             _serviceCollection = serviceCollection;
+            _connection = connection;
             _timeoutTimeSpan = timeout;
         }
 
@@ -43,7 +47,7 @@ namespace ServiceDisc.Networking
 
                 try
                 {
-                    serviceClient.CallServiceAsync(service, invocation, cancellationToken).Wait(cancellationToken);
+                    serviceClient.CallServiceAsync(_connection, service, invocation, cancellationToken).Wait(cancellationToken);
                     break;
                 }
                 catch (Exception ex)
@@ -67,12 +71,20 @@ namespace ServiceDisc.Networking
             }
         }
 
-        private WebApiClient GetServiceClient(ServiceInformation service)
+        private IServiceClient GetServiceClient(ServiceInformation service)
         {
+            // TODO refactor
+
             if (service.HostType == "WebApiHost")
             {
                 return new WebApiClient();
             }
+
+            if (service.HostType == "QueueServiceHost")
+            {
+                return new QueueServiceClient();
+            }
+
             throw new InvalidOperationException($"Unknown HostType: {service.HostType}");
         }
     }

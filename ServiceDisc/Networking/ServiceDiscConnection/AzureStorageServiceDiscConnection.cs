@@ -24,7 +24,7 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
         public TimeSpan MessagePollingDelay { get; set; } = TimeSpan.FromSeconds(10);
 
         private ConcurrentDictionary<Guid, ServiceInformation> _activeServices = new ConcurrentDictionary<Guid, ServiceInformation>();
-        private ConcurrentDictionary<Type, object> _messageListeners = new ConcurrentDictionary<Type, object>();
+        private ConcurrentDictionary<AzureQueueMessageListenerInformation, object> _messageListeners = new ConcurrentDictionary<AzureQueueMessageListenerInformation, object>();
         private Task _expirationRefreshTask;
         private Task _messageListenerTask;
         private CancellationTokenSource _cancellationTokenSource;
@@ -85,10 +85,10 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
             else
             {
                 // Unregister expired services
-                var serviceList = GetServiceListAsync().Result;
+                var serviceList = await GetServiceListAsync().ConfigureAwait(false);
                 foreach (var expiredService in serviceList.Services.Where(s => s.ExpireTime < DateTime.UtcNow))
                 {
-                    UnregisterAsync(expiredService.Id).Wait();
+                    await UnregisterAsync(expiredService.Id).ConfigureAwait(false);
                 }
             }
         }
@@ -229,23 +229,33 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
 
         public Task SendMessageAsync<T>(T message) where T : class
         {
-            return SendMessageAsync(message, TimeSpan.FromMinutes(1));
+            return SendMessageAsync(message, GetQueueName(typeof(T)), TimeSpan.FromMinutes(1));
         }
 
-        public async Task SendMessageAsync<T>(T message, TimeSpan timeToLive)
+        public Task SendMessageAsync<T>(T message, string name) where T : class
         {
-            var queueReference = _queueClient.GetQueueReference(GetQueueName(typeof(T)));
+            return SendMessageAsync(message, name, TimeSpan.FromMinutes(1));
+        }
+
+        public async Task SendMessageAsync<T>(T message, string name, TimeSpan timeToLive)
+        {
+            var queueReference = _queueClient.GetQueueReference(name);
             await queueReference.CreateIfNotExistsAsync().ConfigureAwait(false);
             var textMessage = _typeSerializer.Serialize(message);
             var queueMessage = new CloudQueueMessage(textMessage);
             await queueReference.AddMessageAsync(queueMessage, timeToLive, null, new QueueRequestOptions(), new OperationContext()).ConfigureAwait(false);
         }
 
-        public async Task SubscribeAsync<T>(Action<T> callback) where T : class
+        public Task SubscribeAsync<T>(Action<T> callback) where T : class
         {
-            var queueReference = _queueClient.GetQueueReference(GetQueueName(typeof(T)));
+            return SubscribeAsync(callback, GetQueueName(typeof(T)));
+        }
+
+        public async Task SubscribeAsync<T>(Action<T> callback, string name) where T : class
+        {
+            var queueReference = _queueClient.GetQueueReference(name);
             await queueReference.CreateIfNotExistsAsync().ConfigureAwait(false);
-            _messageListeners.TryAdd(typeof(T), callback);
+            _messageListeners.TryAdd(new AzureQueueMessageListenerInformation(name, typeof(T)), callback);
         }
 
         private async Task HandleMessageListenersAsync(CancellationToken cancellationToken)
@@ -256,15 +266,16 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
 
                 var processedMessages = 0;
 
-                foreach (var messageType in _messageListeners.Keys.ToArray())
+                foreach (var messageListenerInformation in _messageListeners.Keys.ToArray())
                 {
-                    if (_messageListeners.TryGetValue(messageType, out object callback))
+                    if (_messageListeners.TryGetValue(messageListenerInformation, out object callback))
                     {
-                        var queueReference = _queueClient.GetQueueReference(GetQueueName(messageType));
+                        var queueReference = _queueClient.GetQueueReference(messageListenerInformation.QueueName);
+                        await queueReference.CreateIfNotExistsAsync().ConfigureAwait(false);
                         var message = await queueReference.GetMessageAsync().ConfigureAwait(false);
                         if (message != null)
                         {
-                            var deserializedMessage = _typeSerializer.Deserialize(message.AsString, messageType);
+                            var deserializedMessage = _typeSerializer.Deserialize(message.AsString, messageListenerInformation.MessageType);
                             var methodInfo = callback.GetType().GetMethod("Invoke");
                             methodInfo.Invoke(callback, new[] {deserializedMessage});
                             await queueReference.DeleteMessageAsync(message);
@@ -288,7 +299,7 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
 
             if (queueName.Length < 3)
             {
-                queueName = queueName + "-q";
+                queueName += "-q";
             }
             else if (queueName.Length > 63)
             {
@@ -302,8 +313,18 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
-            _expirationRefreshTask?.Dispose();
-            _messageListenerTask?.Dispose();
+
+            try
+            {
+                _expirationRefreshTask?.Dispose();
+            }
+            catch { }
+
+            try
+            {
+                _messageListenerTask?.Dispose();
+            }
+            catch { }
         }
     }
 }

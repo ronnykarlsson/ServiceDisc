@@ -6,15 +6,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using Castle.DynamicProxy;
 using ServiceDisc.Models;
+using ServiceDisc.Networking.ServiceDiscConnection;
 using ServiceDisc.Serialization;
 
 namespace ServiceDisc.Networking.WebApi
 {
-    internal class WebApiClient
+    internal class WebApiClient : IServiceClient
     {
         private static readonly TypeSerializer _typeSerializer = new TypeSerializer();
 
-        public async Task CallServiceAsync(ServiceInformation service, IInvocation invocation, CancellationToken cancellationToken)
+        public async Task CallServiceAsync(IServiceDiscConnection connection, ServiceInformation service, IInvocation invocation, CancellationToken cancellationToken)
         {
             var serviceUrl = BuildServiceUrl(invocation, service);
             using (var client = new HttpClient())

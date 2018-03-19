@@ -24,7 +24,7 @@ namespace ServiceDisc.Networking.HostnameResolution
                 return ipAddresses.First().Address.ToString();
             }
 
-            var addresses = Dns.GetHostAddressesAsync(Dns.GetHostName()).Result;
+            var addresses = Dns.GetHostAddressesAsync(Dns.GetHostName()).GetAwaiter().GetResult();
             var address = addresses.FirstOrDefault(m => m.AddressFamily == AddressFamily.InterNetwork);
             if (address != null) return address.ToString();
 

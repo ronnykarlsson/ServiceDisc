@@ -53,6 +53,25 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
             return Task.FromResult(0);
         }
 
+        public Task SendMessageAsync<T>(T message, string name) where T : class
+        {
+            if (_listeners.TryGetValue(name, out var listeners))
+            {
+                foreach (var listener in (List<Action<T>>)listeners)
+                {
+                    listener(message);
+                }
+            }
+            return Task.FromResult(0);
+        }
+
+        public Task SubscribeAsync<T>(Action<T> callback, string name) where T : class
+        {
+            var listeners = (List<Action<T>>)_listeners.GetOrAdd(name, new List<Action<T>>());
+            listeners.Add(callback);
+            return Task.FromResult(0);
+        }
+
         public void Dispose()
         {
         }

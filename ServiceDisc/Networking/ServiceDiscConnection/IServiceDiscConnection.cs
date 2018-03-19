@@ -14,5 +14,7 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
         Task<ServiceListDocument> GetServiceListAsync();
         Task SendMessageAsync<T>(T message) where T : class;
         Task SubscribeAsync<T>(Action<T> callback) where T : class;
+        Task SendMessageAsync<T>(T message, string name) where T : class;
+        Task SubscribeAsync<T>(Action<T> callback, string name) where T : class;
     }
 }

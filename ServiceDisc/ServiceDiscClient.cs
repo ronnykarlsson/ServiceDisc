@@ -8,6 +8,7 @@ using ServiceDisc.Models;
 using ServiceDisc.Networking;
 using ServiceDisc.Networking.HostnameResolution;
 using ServiceDisc.Networking.ServiceDiscConnection;
+using ServiceDisc.Networking.WebApi;
 
 namespace ServiceDisc
 {
@@ -19,7 +20,14 @@ namespace ServiceDisc
         private readonly List<ServiceInformation> _services = new List<ServiceInformation>();
         private readonly IServiceDiscConnection _connection;
         private readonly ServiceDiscNetworkResolver _networkResolver;
-        private readonly ServiceHostFactory _serviceHostFactory;
+
+        private IServiceHostFactory _serviceHostFactory;
+
+        public IServiceHostFactory ServiceHostFactory
+        {
+            get => _serviceHostFactory;
+            set => _serviceHostFactory = value ?? throw new ArgumentNullException(nameof(value));
+        }
 
         /// <summary>
         /// Constructor
@@ -39,7 +47,7 @@ namespace ServiceDisc
             _networkResolver = networkResolver;
             _connection = connection;
 
-            _serviceHostFactory = new ServiceHostFactory();
+            ServiceHostFactory = new WebApiServiceHostFactory();
         }
 
         /// <summary>
@@ -53,7 +61,7 @@ namespace ServiceDisc
         {
             if (service == null) throw new ArgumentNullException(nameof(service));
 
-            var host = _serviceHostFactory.CreateServiceHost(_networkResolver, service);
+            var host = ServiceHostFactory.CreateServiceHost(_networkResolver, service, _connection);
 
             var serviceInformation = new ServiceInformation(typeof(T), host);
             serviceInformation.Id = Guid.NewGuid();
@@ -167,7 +175,7 @@ namespace ServiceDisc
             serviceDiscCollection.FailedCall += ServiceDiscCollectionOnFailedCall;
 
             var proxyGenerator = new ProxyGenerator();
-            IInterceptor serviceProxy = new ServiceProxy(serviceDiscCollection, TimeSpan.FromMinutes(5));
+            IInterceptor serviceProxy = new ServiceProxy(serviceDiscCollection, _connection, TimeSpan.FromMinutes(5));
 
             var proxyType = proxyGenerator.CreateInterfaceProxyWithoutTarget<T>(serviceProxy);
             return proxyType;

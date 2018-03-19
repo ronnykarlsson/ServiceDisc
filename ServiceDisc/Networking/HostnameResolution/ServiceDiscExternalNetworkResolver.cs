@@ -11,7 +11,7 @@ namespace ServiceDisc.Networking.HostnameResolution
         {
             try
             {
-                var externalIp = new HttpClient().GetStringAsync("http://checkip.dyndns.org/").Result;
+                var externalIp = new HttpClient().GetStringAsync("http://checkip.dyndns.org/").GetAwaiter().GetResult();
                 externalIp = new Regex(@"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}").Matches(externalIp)[0].ToString();
                 return externalIp;
             }
