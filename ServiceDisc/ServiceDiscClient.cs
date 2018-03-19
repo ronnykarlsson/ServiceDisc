@@ -51,6 +51,19 @@ namespace ServiceDisc
         }
 
         /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="connection">Connection to store service information.</param>
+        /// <param name="serviceHostFactory">Factory for hosting the services.</param>
+        public ServiceDiscClient(IServiceDiscConnection connection, IServiceHostFactory serviceHostFactory)
+        {
+            _networkResolver = ServiceDiscNetworkResolver.GetDefaultNetworkResolver();
+            _connection = connection;
+
+            ServiceHostFactory = serviceHostFactory;
+        }
+
+        /// <summary>
         /// Start a host for <paramref name="service"/> and register the service in the service list.
         /// </summary>
         /// <typeparam name="T">Type of service to host. This type will be used to resolve the service.</typeparam>
