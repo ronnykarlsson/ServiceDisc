@@ -240,10 +240,17 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
         public async Task SendMessageAsync<T>(T message, string name, TimeSpan timeToLive)
         {
             var queueReference = _queueClient.GetQueueReference(name);
-            await queueReference.CreateIfNotExistsAsync().ConfigureAwait(false);
             var textMessage = _typeSerializer.Serialize(message);
             var queueMessage = new CloudQueueMessage(textMessage);
-            await queueReference.AddMessageAsync(queueMessage, timeToLive, null, new QueueRequestOptions(), new OperationContext()).ConfigureAwait(false);
+            try
+            {
+                await queueReference.AddMessageAsync(queueMessage, timeToLive, null, new QueueRequestOptions(), new OperationContext()).ConfigureAwait(false);
+            }
+            catch (StorageException e) when (e.Message.Contains("The specified queue does not exist."))
+            {
+                await queueReference.CreateIfNotExistsAsync().ConfigureAwait(false);
+                await queueReference.AddMessageAsync(queueMessage, timeToLive, null, new QueueRequestOptions(), new OperationContext()).ConfigureAwait(false);
+            }
         }
 
         public Task SubscribeAsync<T>(Action<T> callback) where T : class
@@ -253,9 +260,15 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
 
         public async Task SubscribeAsync<T>(Action<T> callback, string name) where T : class
         {
-            var queueReference = _queueClient.GetQueueReference(name);
-            await queueReference.CreateIfNotExistsAsync().ConfigureAwait(false);
-            _messageListeners.TryAdd(new AzureQueueMessageListenerInformation(name, typeof(T)), callback);
+            try
+            {
+                _messageListeners.TryAdd(new AzureQueueMessageListenerInformation(name, typeof(T)), callback);
+            }
+            catch (StorageException e) when (e.Message.Contains("The specified queue does not exist."))
+            {
+                var queueReference = _queueClient.GetQueueReference(name);
+                await queueReference.CreateIfNotExistsAsync().ConfigureAwait(false);
+            }
         }
 
         private async Task HandleMessageListenersAsync(CancellationToken cancellationToken)
@@ -271,8 +284,18 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
                     if (_messageListeners.TryGetValue(messageListenerInformation, out object callback))
                     {
                         var queueReference = _queueClient.GetQueueReference(messageListenerInformation.QueueName);
-                        await queueReference.CreateIfNotExistsAsync().ConfigureAwait(false);
-                        var message = await queueReference.GetMessageAsync().ConfigureAwait(false);
+                        CloudQueueMessage message;
+
+                        try
+                        {
+                            message = await queueReference.GetMessageAsync().ConfigureAwait(false);
+                        }
+                        catch (StorageException e) when (e.Message.Contains("The specified queue does not exist."))
+                        {
+                            await queueReference.CreateIfNotExistsAsync().ConfigureAwait(false);
+                            message = await queueReference.GetMessageAsync().ConfigureAwait(false);
+                        }
+
                         if (message != null)
                         {
                             var deserializedMessage = _typeSerializer.Deserialize(message.AsString, messageListenerInformation.MessageType);
