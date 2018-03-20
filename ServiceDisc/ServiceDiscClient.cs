@@ -7,6 +7,7 @@ using Castle.DynamicProxy;
 using ServiceDisc.Models;
 using ServiceDisc.Networking;
 using ServiceDisc.Networking.HostnameResolution;
+using ServiceDisc.Networking.QueueService;
 using ServiceDisc.Networking.ServiceDiscConnection;
 using ServiceDisc.Networking.WebApi;
 
@@ -33,8 +34,12 @@ namespace ServiceDisc
         /// Constructor
         /// </summary>
         /// <param name="connection">Connection to store service information.</param>
-        public ServiceDiscClient(IServiceDiscConnection connection) : this(connection, ServiceDiscNetworkResolver.GetDefaultNetworkResolver())
+        public ServiceDiscClient(IServiceDiscConnection connection)
         {
+            _networkResolver = ServiceDiscNetworkResolver.GetDefaultNetworkResolver();
+            _connection = connection;
+
+            ServiceHostFactory = new QueueServiceHostFactory();
         }
 
         /// <summary>
