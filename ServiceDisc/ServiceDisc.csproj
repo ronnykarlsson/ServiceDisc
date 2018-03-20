@@ -3,12 +3,19 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>ServiceDisc</PackageId>
-    <PackageVersion>0.0.1-alpha1</PackageVersion>
-    <Authors>ronnykarlsson</Authors>
-    <Description>Serverless service discovery and communication. Works by maintaining a list of services in a common collection (Azure blob storage currently). Services are hosted by starting a local server and exposing the IP, which can then be connected to by using the same service collection.</Description>
+    <PackageVersion>1.0.0</PackageVersion>
+    <Authors>Ronny Karlsson</Authors>
+    <Description>Serverless service discovery and communication. Works by maintaining a list of services in a common collection.</Description>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <RootNamespace>ServiceDisc</RootNamespace>
-    <PackageTags></PackageTags>
+    <PackageTags>service discovery microservices c# .net</PackageTags>
+    <Copyright>Copyright © 2018 Ronny Karlsson</Copyright>
+    <PackageLicenseUrl>https://github.com/ronnykarlsson/ServiceDisc/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/ronnykarlsson/ServiceDisc</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/ronnykarlsson/ServiceDisc</RepositoryUrl>
+    <Company />
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
