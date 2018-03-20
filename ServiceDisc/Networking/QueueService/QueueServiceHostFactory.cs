@@ -5,7 +5,7 @@ namespace ServiceDisc.Networking.QueueService
 {
     public class QueueServiceHostFactory : IServiceHostFactory
     {
-        public IHost CreateServiceHost<T>(ServiceDiscNetworkResolver networkResolver, T service, IServiceDiscConnection connection)
+        public IHost CreateServiceHost<T>(T service, IServiceDiscConnection connection, ServiceDiscNetworkResolver networkResolver)
         {
             var host = new QueueServiceHost<T>(service, connection);
             return host;

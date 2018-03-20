@@ -3,8 +3,11 @@ using ServiceDisc.Networking.ServiceDiscConnection;
 
 namespace ServiceDisc.Networking
 {
+    /// <summary>
+    /// Handle creation of service hosts.
+    /// </summary>
     public interface IServiceHostFactory
     {
-        IHost CreateServiceHost<T>(ServiceDiscNetworkResolver networkResolver, T service, IServiceDiscConnection connection);
+        IHost CreateServiceHost<T>(T service, IServiceDiscConnection connection, ServiceDiscNetworkResolver networkResolver);
     }
 }

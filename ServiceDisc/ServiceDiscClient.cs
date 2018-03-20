@@ -74,7 +74,7 @@ namespace ServiceDisc
         {
             if (service == null) throw new ArgumentNullException(nameof(service));
 
-            var host = ServiceHostFactory.CreateServiceHost(_networkResolver, service, _connection);
+            var host = ServiceHostFactory.CreateServiceHost(service, _connection, _networkResolver);
 
             var serviceInformation = new ServiceInformation(typeof(T), host);
             serviceInformation.Id = Guid.NewGuid();
