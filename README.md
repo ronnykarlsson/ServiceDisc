@@ -4,17 +4,18 @@ The purpose of ServiceDisc is to make it easier to build applications consisting
 
 ServiceDisc requires common storage between clients and services. Currently [Azure Storage](https://azure.microsoft.com/en-us/services/storage/) is implemented, and in-memory storage for testing. Other storage can be implemented using the ``IServiceDiscConnection`` interface which requires methods to register/unregister services and to send/receive messages.
 
-## Installing ServiceDisc
+## Installing from [NuGet](https://www.nuget.org/packages/ServiceDisc/)
 
 ```powershell
 Install-Package ServiceDisc
 ```
 
-## Example usage
+## Example
 
 ```c#
-// Create a client, used for hosting a connecting to services.
-// Pass an instance of AzureStorageServiceDiscConnection to store services in Azure.
+// Create a client, used for hosting and connecting to services.
+// Pass an instance of AzureStorageServiceDiscConnection to store services in Azure,
+// to enable having clients and services on different computers.
 var serviceDisc = new ServiceDiscClient(new InMemoryServiceDiscConnection());
 
 // Create an instance of a class to host as a service.
@@ -29,6 +30,6 @@ await serviceDisc.HostAsync<IHelloService>(helloService);
 // and create a proxy class to communicate with it.
 var helloServiceClient = await serviceDisc.GetAsync<IHelloService>(serviceName);
 
-// Communicate with the service.
+// Send and receive a message from the service.
 var world = helloServiceClient.Hello();
 ```
