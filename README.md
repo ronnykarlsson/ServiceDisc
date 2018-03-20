@@ -6,7 +6,7 @@ ServiceDisc requires common storage between clients and services. Currently [Azu
 
 ## Installing ServiceDisc
 
-```powershell
+```nuget
 Install-Package ServiceDisc
 ```
 
