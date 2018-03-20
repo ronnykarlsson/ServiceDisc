@@ -17,7 +17,7 @@ namespace ServiceDisc.Networking.QueueService
 
         public async Task CallServiceAsync(IServiceDiscConnection connection, ServiceInformation service, IInvocation invocation, CancellationToken cancellationToken)
         {
-            var queueName = GetQueueName(service.Type);
+            var queueName = service.Address;
             var parameters = BuildParameterDictionary(invocation);
 
             var responseQueue = _responseQueueDictionary.GetOrAdd(connection, c => new QueueServiceClientResponseQueue(c));
@@ -48,21 +48,6 @@ namespace ServiceDisc.Networking.QueueService
                 var deserializedResult = _typeSerializer.Deserialize(responseString, invocation.Method.ReturnType);
                 invocation.ReturnValue = deserializedResult;
             }
-        }
-
-        private string GetQueueName(string serviceType)
-        {
-            var queueName = serviceType.Replace(".", "-").ToLowerInvariant();
-
-            queueName += "-qsh";
-
-            if (queueName.Length > 63)
-            {
-                queueName = queueName.Substring(queueName.Length - 63, 63);
-                queueName.Trim('-');
-            }
-
-            return queueName;
         }
 
         private Dictionary<string, string> BuildParameterDictionary(IInvocation invocation)

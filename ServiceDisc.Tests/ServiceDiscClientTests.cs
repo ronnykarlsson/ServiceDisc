@@ -80,7 +80,7 @@ namespace ServiceDisc.Tests
 
                 var hostedService = client.HostAsync(new TestService()).Result;
 
-                Assert.NotNull(hostedService.Uri);
+                Assert.NotNull(hostedService.Address);
             }
 
             [Fact]

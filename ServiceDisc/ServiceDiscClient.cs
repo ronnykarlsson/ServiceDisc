@@ -84,7 +84,7 @@ namespace ServiceDisc
 
             await _connection.RegisterAsync(serviceInformation).ConfigureAwait(false);
 
-            Trace.WriteLine($"{serviceInformation.Type} hosted on {host.Uri}");
+            Trace.WriteLine($"{serviceInformation.Type} hosted on {host.Address}");
 
             return serviceInformation;
         }

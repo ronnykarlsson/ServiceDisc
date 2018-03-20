@@ -12,11 +12,13 @@ namespace ServiceDisc.Networking.QueueService
     public class QueueServiceHost<T> : IHost
     {
         public string Type => "QueueServiceHost";
-        public Uri Uri { get; }
+        public string Address { get; }
 
         public QueueServiceHost(T service, IServiceDiscConnection connection)
         {
             var queueName = GetQueueName(typeof(T));
+            Address = queueName;
+
             var serviceProxy = new WebApiServiceCaller(service);
 
             connection.SubscribeAsync<QueueServiceRequestMessage>(async message =>

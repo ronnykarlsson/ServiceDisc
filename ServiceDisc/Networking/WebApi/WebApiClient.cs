@@ -45,7 +45,7 @@ namespace ServiceDisc.Networking.WebApi
 
             var parameters = invocation.Method.GetParameters();
 
-            stringBuilder.Append(service.Uri);
+            stringBuilder.Append(service.Address);
             stringBuilder.Append(invocation.Method.Name);
 
             for (var i = 0; i < parameters.Length; i++)

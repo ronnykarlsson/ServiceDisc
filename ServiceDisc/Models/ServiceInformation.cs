@@ -14,7 +14,7 @@ namespace ServiceDisc.Models
         public ServiceInformation(Type type, IHost host)
         {
             Type = type.FullName;
-            Uri = host.Uri;
+            Address = host.Address;
             HostType = host.Type;
         }
 
@@ -41,7 +41,7 @@ namespace ServiceDisc.Models
         /// <summary>
         /// The endpoint on which to reach the service.
         /// </summary>
-        public Uri Uri { get; set; }
+        public string Address { get; set; }
 
         /// <summary>
         /// The UTC DateTime on which the service expires.
@@ -51,7 +51,7 @@ namespace ServiceDisc.Models
         public override string ToString()
         {
             var serviceNameString = string.IsNullOrEmpty(Name) ? Type : $"{Type} ({Name})";
-            return $"{Id}: {serviceNameString} - {Uri}";
+            return $"{Id}: {serviceNameString} - {Address}";
         }
     }
 }

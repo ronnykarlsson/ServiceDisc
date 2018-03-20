@@ -9,7 +9,7 @@ namespace ServiceDisc.Networking.WebApi
     internal class WebApiHost<T> : IHost
     {
         public string Type => "WebApiHost";
-        public Uri Uri { get; }
+        public string Address { get; }
 
         readonly IWebHost _host;
 
@@ -63,7 +63,7 @@ namespace ServiceDisc.Networking.WebApi
 
             var publishedHostname = networkResolver.GetPublishedHostname();
 
-            Uri = new Uri($"http://{publishedHostname}:{localPort}");
+            Address = $"http://{publishedHostname}:{localPort}/";
         }
 
         public void Close()
