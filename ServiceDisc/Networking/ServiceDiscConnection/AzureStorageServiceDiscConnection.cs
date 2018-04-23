@@ -9,6 +9,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json;
+using ServiceDisc.Helpers;
 using ServiceDisc.Models;
 using ServiceDisc.Serialization;
 
@@ -37,7 +38,7 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
             _blobClient = storageAccount.CreateCloudBlobClient();
             _queueClient = storageAccount.CreateCloudQueueClient();
 
-            InitializeAsync().Wait();
+            AsyncHelper.RunSync(InitializeAsync);
 
             _cancellationTokenSource = new CancellationTokenSource();
             _expirationRefreshTask = Task.Run(async () => await HandleServiceExpirationAsync(_cancellationTokenSource.Token).ConfigureAwait(false));
