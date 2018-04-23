@@ -301,7 +301,7 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
                             var deserializedMessage = _typeSerializer.Deserialize(message.AsString, messageListenerInformation.MessageType);
                             var methodInfo = callback.GetType().GetMethod("Invoke");
                             methodInfo.Invoke(callback, new[] {deserializedMessage});
-                            await queueReference.DeleteMessageAsync(message);
+                            await queueReference.DeleteMessageAsync(message).ConfigureAwait(false);
                             processedMessages++;
                         }
                     }
