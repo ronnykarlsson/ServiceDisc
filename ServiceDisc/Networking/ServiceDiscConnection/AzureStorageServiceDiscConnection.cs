@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
@@ -135,7 +136,7 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
                 {
                     if (e.Message.Contains("condition specified using HTTP conditional header(s) is not met")) continue;
 
-                    Trace.WriteLine($"Error while registering monitor.\n{e}");
+                    Trace.WriteLine($"Error while registering service.\n{e}");
                     throw;
                 }
             }
@@ -180,7 +181,7 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
                 {
                     if (e.Message.Contains("condition specified using HTTP conditional header(s) is not met")) continue;
 
-                    Trace.WriteLine($"Error while registering monitor.\n{e}");
+                    Trace.WriteLine($"Error while refreshing service.\n{e}");
                     throw;
                 }
             }
@@ -212,7 +213,7 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
                 {
                     if (e.Message.Contains("condition specified using HTTP conditional header(s) is not met")) continue;
 
-                    Trace.WriteLine($"Error while unregistering monitor.\n{e}");
+                    Trace.WriteLine($"Error while unregistering service.\n{e}");
                     throw;
                 }
             }
@@ -319,8 +320,8 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
 
         private string GetQueueName(Type messageType)
         {
-            var queueName = messageType.FullName.Replace(".", "-").ToLowerInvariant();
-
+            var queueName = Regex.Replace(messageType.FullName.ToLowerInvariant(), @"[^a-z0-9-]+", "-");
+            
             if (queueName.Length < 3)
             {
                 queueName += "-q";
