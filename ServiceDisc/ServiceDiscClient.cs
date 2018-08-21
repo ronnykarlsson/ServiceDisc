@@ -19,15 +19,40 @@ namespace ServiceDisc
     public class ServiceDiscClient : IServiceDiscClient
     {
         private readonly List<ServiceInformation> _services = new List<ServiceInformation>();
-        private readonly IServiceDiscConnection _connection;
         private readonly ServiceDiscNetworkResolver _networkResolver;
 
         private IServiceHostFactory _serviceHostFactory;
+
+        internal IServiceDiscConnection ServiceDiscConnection { get; }
 
         public IServiceHostFactory ServiceHostFactory
         {
             get => _serviceHostFactory;
             set => _serviceHostFactory = value ?? throw new ArgumentNullException(nameof(value));
+        }
+
+        /// <summary>
+        /// Create client using <see cref="InMemoryServiceDiscConnection"/>.
+        /// </summary>
+        public ServiceDiscClient() : this(new InMemoryServiceDiscConnection())
+        {
+        }
+
+        /// <summary>
+        /// Constructor using a connection string. It should contain "ProviderName=" with the name of a class
+        /// implementing <see cref="IServiceDiscConnection"/>, delimited by semicolon.
+        /// </summary>
+        /// <example>
+        /// var serviceDisc = new ServiceDiscClient("ProviderName=AzureStorageServiceDiscConnection;DefaultEndpointsProtocol=https;AccountName=MyAccount;AccountKey=MyAccountKey;EndpointSuffix=core.windows.net");
+        /// </example>
+        /// <example>
+        /// var serviceDisc = new ServiceDiscClient("ConnectionStringSettingName");
+        /// </example>
+        /// <param name="connectionString">Connection string to create <see cref="IServiceDiscConnection"/> from.</param>
+        public ServiceDiscClient(string connectionString)
+        {
+            _networkResolver = ServiceDiscNetworkResolver.GetDefaultNetworkResolver();
+            ServiceDiscConnection = ConnectionStringParser.Create(connectionString);
         }
 
         /// <summary>
@@ -37,7 +62,7 @@ namespace ServiceDisc
         public ServiceDiscClient(IServiceDiscConnection connection)
         {
             _networkResolver = ServiceDiscNetworkResolver.GetDefaultNetworkResolver();
-            _connection = connection;
+            ServiceDiscConnection = connection;
 
             ServiceHostFactory = new QueueServiceHostFactory();
         }
@@ -50,7 +75,7 @@ namespace ServiceDisc
         public ServiceDiscClient(IServiceDiscConnection connection, ServiceDiscNetworkResolver networkResolver)
         {
             _networkResolver = networkResolver;
-            _connection = connection;
+            ServiceDiscConnection = connection;
 
             ServiceHostFactory = new WebApiServiceHostFactory();
         }
@@ -63,7 +88,7 @@ namespace ServiceDisc
         public ServiceDiscClient(IServiceDiscConnection connection, IServiceHostFactory serviceHostFactory)
         {
             _networkResolver = ServiceDiscNetworkResolver.GetDefaultNetworkResolver();
-            _connection = connection;
+            ServiceDiscConnection = connection;
 
             ServiceHostFactory = serviceHostFactory;
         }
@@ -79,7 +104,7 @@ namespace ServiceDisc
         {
             if (service == null) throw new ArgumentNullException(nameof(service));
 
-            var host = ServiceHostFactory.CreateServiceHost(service, _connection, _networkResolver);
+            var host = ServiceHostFactory.CreateServiceHost(service, ServiceDiscConnection, _networkResolver);
 
             var serviceInformation = new ServiceInformation(typeof(T), host);
             serviceInformation.Id = Guid.NewGuid();
@@ -87,7 +112,7 @@ namespace ServiceDisc
 
             _services.Add(serviceInformation);
 
-            await _connection.RegisterAsync(serviceInformation).ConfigureAwait(false);
+            await ServiceDiscConnection.RegisterAsync(serviceInformation).ConfigureAwait(false);
 
             Trace.WriteLine($"{serviceInformation.Type} hosted on {host.Address}");
 
@@ -100,7 +125,7 @@ namespace ServiceDisc
         /// <param name="serviceInformation">Document describing the service to unregister.</param>
         public async Task UnregisterAsync(ServiceInformation serviceInformation)
         {
-            await _connection.UnregisterAsync(serviceInformation.Id).ConfigureAwait(false);
+            await ServiceDiscConnection.UnregisterAsync(serviceInformation.Id).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -110,7 +135,7 @@ namespace ServiceDisc
         /// <returns>Proxy for communicating with the service.</returns>
         public async Task<T> GetAsync<T>() where T : class
         {
-            var document = await _connection.GetServiceListAsync().ConfigureAwait(false);
+            var document = await ServiceDiscConnection.GetServiceListAsync().ConfigureAwait(false);
 
             var serviceName = typeof(T).FullName;
             var services = document.Services.Where(s => s.Type == serviceName).ToArray();
@@ -132,7 +157,7 @@ namespace ServiceDisc
         /// <returns>Proxy for communicating with the service.</returns>
         public async Task<T> GetAsync<T>(Guid id) where T : class
         {
-            var document = await _connection.GetServiceListAsync().ConfigureAwait(false);
+            var document = await ServiceDiscConnection.GetServiceListAsync().ConfigureAwait(false);
 
             var serviceName = typeof(T).FullName;
             var services = document.Services.Where(s => s.Type == serviceName && s.Id == id).ToArray();
@@ -154,7 +179,7 @@ namespace ServiceDisc
         /// <returns>Proxy for communicating with the service.</returns>
         public async Task<T> GetAsync<T>(string name) where T : class
         {
-            var document = await _connection.GetServiceListAsync().ConfigureAwait(false);
+            var document = await ServiceDiscConnection.GetServiceListAsync().ConfigureAwait(false);
 
             var serviceName = typeof(T).FullName;
             var services = document.Services.Where(s => s.Type == serviceName && s.Name == name).ToArray();
@@ -174,7 +199,7 @@ namespace ServiceDisc
         /// <typeparam name="T">Type of message to send.</typeparam>
         public async Task SendAsync<T>(T message) where T : class
         {
-            await _connection.SendMessageAsync(message).ConfigureAwait(false);
+            await ServiceDiscConnection.SendMessageAsync(message).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -184,7 +209,7 @@ namespace ServiceDisc
         /// <param name="callback">Callback for when message arrives.</param>
         public Task SubscribeAsync<T>(Action<T> callback) where T : class
         {
-            return _connection.SubscribeAsync(callback);
+            return ServiceDiscConnection.SubscribeAsync(callback);
         }
 
         private T CreateServiceProxy<T>(ServiceInformation[] services) where T : class
@@ -193,7 +218,7 @@ namespace ServiceDisc
             serviceDiscCollection.FailedCall += ServiceDiscCollectionOnFailedCall;
 
             var proxyGenerator = new ProxyGenerator();
-            IInterceptor serviceProxy = new ServiceProxy(serviceDiscCollection, _connection, TimeSpan.FromMinutes(5));
+            IInterceptor serviceProxy = new ServiceProxy(serviceDiscCollection, ServiceDiscConnection, TimeSpan.FromMinutes(5));
 
             var proxyType = proxyGenerator.CreateInterfaceProxyWithoutTarget<T>(serviceProxy);
             return proxyType;
@@ -203,13 +228,13 @@ namespace ServiceDisc
         {
             if (failedCallEventArgs.ServiceInformation.ExpireTime < DateTime.UtcNow)
             {
-                _connection.UnregisterAsync(failedCallEventArgs.ServiceInformation.Id).Wait();
+                ServiceDiscConnection.UnregisterAsync(failedCallEventArgs.ServiceInformation.Id).Wait();
             }
         }
 
         public void Dispose()
         {
-            _connection?.Dispose();
+            ServiceDiscConnection?.Dispose();
         }
     }
 }

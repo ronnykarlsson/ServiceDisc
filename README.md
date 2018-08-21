@@ -16,7 +16,7 @@ Install-Package ServiceDisc
 // Create a client, used for hosting and connecting to services.
 // Pass an instance of AzureStorageServiceDiscConnection to store services in Azure,
 // to enable having clients and services on different computers.
-var serviceDisc = new ServiceDiscClient(new InMemoryServiceDiscConnection());
+var serviceDisc = new ServiceDiscClient();
 
 // Create an instance of a class to host as a service.
 var helloService = new HelloService();
