@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>ServiceDisc</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
     <Authors>Ronny Karlsson</Authors>
     <Description>Serverless service discovery and communication. Works by maintaining a list of services in a common collection.</Description>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
