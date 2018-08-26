@@ -24,6 +24,7 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
         string _serviceListDocumentId = "servicelist.txt";
         static TimeSpan ExpireTimeSpan => TimeSpan.FromMinutes(2);
         public TimeSpan MessagePollingDelay { get; set; } = TimeSpan.FromSeconds(10);
+        private TimeSpan _currentMessagePollingDelay = TimeSpan.FromSeconds(0);
 
         private ConcurrentDictionary<Guid, ServiceInformation> _activeServices = new ConcurrentDictionary<Guid, ServiceInformation>();
         private ConcurrentDictionary<AzureQueueMessageListenerInformation, object> _messageListeners = new ConcurrentDictionary<AzureQueueMessageListenerInformation, object>();
@@ -313,7 +314,14 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
 
                 if (processedMessages == 0)
                 {
-                    await Task.Delay(MessagePollingDelay, cancellationToken).ConfigureAwait(false);
+                    _currentMessagePollingDelay += TimeSpan.FromSeconds(1);
+                    if (_currentMessagePollingDelay > MessagePollingDelay) _currentMessagePollingDelay = MessagePollingDelay;
+
+                    await Task.Delay(_currentMessagePollingDelay, cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    _currentMessagePollingDelay = TimeSpan.FromSeconds(0);
                 }
             }
         }

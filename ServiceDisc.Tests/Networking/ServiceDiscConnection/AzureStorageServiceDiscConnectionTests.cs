@@ -18,7 +18,7 @@ namespace ServiceDisc.Tests.Networking.ServiceDiscConnection
             
             Skip.If(string.IsNullOrWhiteSpace(connectionString), "Azure storage connection string required in azurestorage.txt");
 
-            return new AzureStorageServiceDiscConnection(connectionString) { MessagePollingDelay = TimeSpan.FromSeconds(1) };
+            return new AzureStorageServiceDiscConnection(connectionString);
         }
     }
 }
