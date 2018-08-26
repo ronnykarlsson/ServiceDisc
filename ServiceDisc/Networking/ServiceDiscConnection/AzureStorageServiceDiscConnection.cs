@@ -143,7 +143,7 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
             }
         }
 
-        public async Task RefreshExpirationAsync(IEnumerable<ServiceInformation> serviceInformationList)
+        private async Task RefreshExpirationAsync(ICollection<ServiceInformation> serviceInformationList)
         {
             var blob = GetServiceBlob();
 
@@ -232,7 +232,7 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
 
         public Task SendMessageAsync<T>(T message) where T : class
         {
-            return SendMessageAsync(message, GetQueueName(typeof(T)), TimeSpan.FromMinutes(1));
+            return SendMessageAsync(message, AzureStorageQueueHelpers.GetQueueName(typeof(T)), TimeSpan.FromMinutes(1));
         }
 
         public Task SendMessageAsync<T>(T message, string name) where T : class
@@ -258,7 +258,7 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
 
         public Task SubscribeAsync<T>(Action<T> callback) where T : class
         {
-            return SubscribeAsync(callback, GetQueueName(typeof(T)));
+            return SubscribeAsync(callback, AzureStorageQueueHelpers.GetQueueName(typeof(T)));
         }
 
         public async Task SubscribeAsync<T>(Action<T> callback, string name) where T : class
@@ -324,23 +324,6 @@ namespace ServiceDisc.Networking.ServiceDiscConnection
                     _currentMessagePollingDelay = TimeSpan.FromSeconds(0);
                 }
             }
-        }
-
-        private string GetQueueName(Type messageType)
-        {
-            var queueName = Regex.Replace(messageType.FullName.ToLowerInvariant(), @"[^a-z0-9-]+", "-");
-            
-            if (queueName.Length < 3)
-            {
-                queueName += "-q";
-            }
-            else if (queueName.Length > 63)
-            {
-                queueName = queueName.Substring(queueName.Length - 63, 63);
-                queueName.Trim('-');
-            }
-
-            return queueName;
         }
 
         public void Dispose()

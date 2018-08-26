@@ -34,14 +34,13 @@ namespace ServiceDisc.Networking.QueueService
 
         private string GetQueueName(Type serviceType)
         {
-            var queueName = serviceType.FullName.Replace(".", "-").ToLowerInvariant();
-
+            var queueName = AzureStorageQueueHelpers.GetQueueName(serviceType);
             queueName += "-qsh";
 
             if (queueName.Length > 63)
             {
                 queueName = queueName.Substring(queueName.Length - 63, 63);
-                queueName.Trim('-');
+                queueName = queueName.Trim('-');
             }
 
             return queueName;
