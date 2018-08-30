@@ -25,16 +25,18 @@ namespace ServiceDisc.Networking.QueueService
             var messageId = Guid.NewGuid().ToString();
             var message = new QueueServiceRequestMessage(invocation.Method.Name, parameters, responseQueue.ClientId, messageId);
 
+            var messageReceived = false;
             string responseString = null;
             responseQueue.Subscribe(messageId, response =>
             {
                 responseString = response;
+                messageReceived = true;
             });
 
             await connection.SendMessageAsync(message, queueName).ConfigureAwait(false);
 
             var timeout = DateTime.UtcNow.Add(TimeSpan.FromSeconds(60));
-            while (responseString == null)
+            while (!messageReceived)
             {
                 if (DateTime.UtcNow > timeout)
                 {
@@ -43,7 +45,7 @@ namespace ServiceDisc.Networking.QueueService
                 await Task.Delay(100, cancellationToken).ConfigureAwait(false);
             }
 
-            if (invocation.Method.ReturnType != null)
+            if (responseString != null && invocation.Method.ReturnType != null)
             {
                 var deserializedResult = _typeSerializer.Deserialize(responseString, invocation.Method.ReturnType);
                 invocation.ReturnValue = deserializedResult;

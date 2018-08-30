@@ -30,7 +30,7 @@ namespace ServiceDisc.Networking.WebApi
                 var parameterType = methodParameter.ParameterType;
 
                 StringValues queryValues;
-                if (!requestQuery.TryGetValue(methodParameter.Name, out queryValues))
+                if (!requestQuery.TryGetValue(methodParameter.Name, out queryValues) || !queryValues.Any())
                 {
                     return null;
                 }

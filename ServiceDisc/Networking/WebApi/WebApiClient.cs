@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Threading;
 using System.Threading.Tasks;
 using Castle.DynamicProxy;
@@ -23,6 +25,8 @@ namespace ServiceDisc.Networking.WebApi
                 try
                 {
                     var response = await client.GetAsync(new Uri(serviceUrl), cancellationToken).ConfigureAwait(false);
+                    if (response.StatusCode == HttpStatusCode.NoContent) return;
+
                     var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                     if (invocation.Method.ReturnType != null)
@@ -50,11 +54,16 @@ namespace ServiceDisc.Networking.WebApi
 
             for (var i = 0; i < parameters.Length; i++)
             {
+                var invocationArgument = invocation.Arguments[i];
+                if (invocationArgument == null) continue;
+
                 stringBuilder.Append(i == 0 ? "?" : "&");
 
                 stringBuilder.Append(parameters[i].Name);
                 stringBuilder.Append("=");
-                stringBuilder.Append(_typeSerializer.Serialize(invocation.Arguments[i]));
+                var serializedParameter = _typeSerializer.Serialize(invocationArgument);
+                var encodedParameter = UrlEncoder.Default.Encode(serializedParameter);
+                stringBuilder.Append(encodedParameter);
             }
             return stringBuilder.ToString();
         }

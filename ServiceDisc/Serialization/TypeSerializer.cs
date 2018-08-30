@@ -39,6 +39,8 @@ namespace ServiceDisc.Serialization
 
         public string Serialize(object input)
         {
+            if (input == null) return null;
+
             if (_conversionDictionary.ContainsKey(input.GetType()))
             {
                 return input.ToString();
