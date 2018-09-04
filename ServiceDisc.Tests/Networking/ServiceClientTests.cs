@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text;
 using ServiceDisc.Networking;
 using ServiceDisc.Networking.ServiceDiscConnection;
@@ -17,8 +18,89 @@ namespace ServiceDisc.Tests.Networking
         {
             var echoService = CreateEchoService();
 
-            var result = echoService.Send(input);
+            var result = echoService.EchoString(input);
             Assert.Equal(input, result);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(long.MaxValue)]
+        [InlineData(long.MinValue)]
+        public void EchoLongNumbers(long input)
+        {
+            var echoService = CreateEchoService();
+
+            var result = echoService.EchoLong(input);
+            Assert.Equal(input, result);
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(ulong.MaxValue)]
+        [InlineData(ulong.MinValue)]
+        public void EchoUlongNumbers(ulong input)
+        {
+            var echoService = CreateEchoService();
+
+            var result = echoService.EchoUlong(input);
+            Assert.Equal(input, result);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(1.2f)]
+        [InlineData(float.Epsilon)]
+        [InlineData(float.NaN)]
+        [InlineData(float.NegativeInfinity)]
+        [InlineData(float.PositiveInfinity)]
+        [InlineData(float.MaxValue)]
+        [InlineData(float.MinValue)]
+        public void EchoFloatNumbers(float input)
+        {
+            var echoService = CreateEchoService();
+
+            var result = echoService.EchoFloat(input);
+            Assert.Equal(input, result);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(1.2)]
+        [InlineData(double.Epsilon)]
+        [InlineData(double.NaN)]
+        [InlineData(double.NegativeInfinity)]
+        [InlineData(double.PositiveInfinity)]
+        [InlineData(double.MaxValue)]
+        [InlineData(double.MinValue)]
+        public void EchoDoubleNumbers(double input)
+        {
+            var echoService = CreateEchoService();
+
+            var result = echoService.EchoDouble(input);
+            Assert.Equal(input, result);
+        }
+
+        [Fact]
+        public void EchoDateTime()
+        {
+            var dateTime = new DateTime(2018, 9, 4);
+            var echoService = CreateEchoService();
+
+            var result = echoService.EchoDateTime(dateTime);
+            Assert.Equal(dateTime, result);
+        }
+
+        [Fact]
+        public void EchoDefaultDateTime()
+        {
+            var dateTime = default(DateTime);
+            var echoService = CreateEchoService();
+
+            var result = echoService.EchoDateTime(dateTime);
+            Assert.Equal(dateTime, result);
         }
 
         [Fact]
@@ -103,12 +185,42 @@ namespace ServiceDisc.Tests.Networking
 
     public interface IEchoService
     {
-        string Send(string input);
+        string EchoString(string input);
+        long EchoLong(long input);
+        ulong EchoUlong(ulong input);
+        float EchoFloat(float input);
+        double EchoDouble(double input);
+        DateTime EchoDateTime(DateTime input);
     }
 
     public class EchoService : IEchoService
     {
-        public string Send(string input)
+        public string EchoString(string input)
+        {
+            return input;
+        }
+
+        public long EchoLong(long input)
+        {
+            return input;
+        }
+
+        public ulong EchoUlong(ulong input)
+        {
+            return input;
+        }
+
+        public float EchoFloat(float input)
+        {
+            return input;
+        }
+
+        public double EchoDouble(double input)
+        {
+            return input;
+        }
+
+        public DateTime EchoDateTime(DateTime input)
         {
             return input;
         }
