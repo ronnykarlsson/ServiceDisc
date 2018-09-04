@@ -17,13 +17,13 @@ namespace ServiceDisc.Networking.QueueService
             connection.SubscribeAsync<QueueServiceResponseMessage>(ResponseCallback, ClientId).GetAwaiter().GetResult();
         }
 
-        public void Subscribe(string messageId, Action<string> callback)
+        public void Subscribe(string messageId, Action<QueueServiceResponseMessage> callback)
         {
             // TODO remove callbacks after timeout
 
             if (!_callbackDictionary.TryAdd(messageId, message =>
             {
-                callback(message.Response);
+                callback(message);
                 _callbackDictionary.TryRemove(messageId, out _);
             }))
             {

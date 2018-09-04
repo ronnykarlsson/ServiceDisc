@@ -33,10 +33,10 @@ namespace ServiceDisc.Networking.QueueService
             var message = new QueueServiceRequestMessage(invocation.Method.Name, parameters, responseQueue.ClientId, messageId);
 
             var messageReceived = false;
-            string responseString = null;
-            responseQueue.Subscribe(messageId, response =>
+            QueueServiceResponseMessage response = null;
+            responseQueue.Subscribe(messageId, responseMessage =>
             {
-                responseString = response;
+                response = responseMessage;
                 messageReceived = true;
             });
 
@@ -52,9 +52,14 @@ namespace ServiceDisc.Networking.QueueService
                 await Task.Delay(100, cancellationToken).ConfigureAwait(false);
             }
 
-            if (responseString != null && invocation.Method.ReturnType != null)
+            if (response?.Exception != null)
             {
-                var deserializedResult = _typeSerializer.Deserialize(responseString, invocation.Method.ReturnType);
+                throw new ServiceDiscException("Exception occured in service.", response.Exception);
+            }
+
+            if (response != null && invocation.Method.ReturnType != null)
+            {
+                var deserializedResult = _typeSerializer.Deserialize(response.Response, invocation.Method.ReturnType);
                 invocation.ReturnValue = deserializedResult;
             }
         }

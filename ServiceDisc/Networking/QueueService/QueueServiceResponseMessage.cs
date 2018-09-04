@@ -1,4 +1,6 @@
-﻿namespace ServiceDisc.Networking.QueueService
+﻿using System;
+
+namespace ServiceDisc.Networking.QueueService
 {
     public class QueueServiceResponseMessage
     {
@@ -14,5 +16,6 @@
 
         public string MessageId { get; set; }
         public string Response { get; set; }
+        public Exception Exception { get; set; }
     }
 }

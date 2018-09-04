@@ -23,11 +23,21 @@ namespace ServiceDisc.Networking.QueueService
 
             connection.SubscribeAsync<QueueServiceRequestMessage>(async message =>
             {
-                var parameters = JsonConvert.DeserializeObject<Dictionary<string, string>>(message.Parameters);
-                var queryCollection = new QueryCollection(parameters.ToDictionary(d => d.Key, d => new StringValues(d.Value)));
-                var responseString = (string) serviceProxy.Call(message.MethodName, queryCollection, null);
-                var response = new QueueServiceResponseMessage(message.MessageId, responseString);
                 var responseQueueName = message.ClientId;
+                string responseString;
+                try
+                {
+                    var parameters = JsonConvert.DeserializeObject<Dictionary<string, string>>(message.Parameters);
+                    var queryCollection = new QueryCollection(parameters.ToDictionary(d => d.Key, d => new StringValues(d.Value)));
+                    responseString = (string) serviceProxy.Call(message.MethodName, queryCollection, null);
+                }
+                catch (Exception e)
+                {
+                    var errorResponse = new QueueServiceResponseMessage(message.MessageId, null) { Exception = e };
+                    await connection.SendMessageAsync(errorResponse, responseQueueName).ConfigureAwait(false);
+                    return;
+                }
+                var response = new QueueServiceResponseMessage(message.MessageId, responseString);
                 await connection.SendMessageAsync(response, responseQueueName).ConfigureAwait(false);
             }, queueName).Wait();
         }
