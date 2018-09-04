@@ -1,3 +1,4 @@
+using System.IO;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -15,7 +16,7 @@ namespace ServiceDisc.Networking.WebApi
             _service = service;
         }
 
-        public string Call(string methodName, IQueryCollection requestQuery)
+        public object Call(string methodName, IQueryCollection requestQuery, Stream stream = null)
         {
             var method = _service.GetType().GetMethod(methodName);
             if (method == null) return null;
@@ -29,15 +30,22 @@ namespace ServiceDisc.Networking.WebApi
                 var methodParameter = methodParameters[i];
                 var parameterType = methodParameter.ParameterType;
 
-                StringValues queryValues;
-                if (!requestQuery.TryGetValue(methodParameter.Name, out queryValues) || !queryValues.Any())
+                object convertedValue;
+
+                if (typeof(Stream).IsAssignableFrom(parameterType))
                 {
-                    return null;
+                    convertedValue = stream;
                 }
+                else
+                {
+                    if (!requestQuery.TryGetValue(methodParameter.Name, out var queryValues) || !queryValues.Any())
+                    {
+                        return null;
+                    }
 
-                var queryValue = queryValues.Single();
-
-                object convertedValue = _typeSerializer.Deserialize(queryValue, parameterType);
+                    var queryValue = queryValues.Single();
+                    convertedValue = _typeSerializer.Deserialize(queryValue, parameterType);
+                }
 
                 parameters[i] = convertedValue;
             }
@@ -45,6 +53,7 @@ namespace ServiceDisc.Networking.WebApi
             var result = method.Invoke(_service, parameters);
 
             if (result == null) return null;
+            if (result is Stream) return result;
             return _typeSerializer.Serialize(result);
         }
     }

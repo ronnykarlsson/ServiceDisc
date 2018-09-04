@@ -25,7 +25,7 @@ namespace ServiceDisc.Networking.QueueService
             {
                 var parameters = JsonConvert.DeserializeObject<Dictionary<string, string>>(message.Parameters);
                 var queryCollection = new QueryCollection(parameters.ToDictionary(d => d.Key, d => new StringValues(d.Value)));
-                var responseString = serviceProxy.Call(message.MethodName, queryCollection);
+                var responseString = (string) serviceProxy.Call(message.MethodName, queryCollection, null);
                 var response = new QueueServiceResponseMessage(message.MessageId, responseString);
                 var responseQueueName = message.ClientId;
                 await connection.SendMessageAsync(response, responseQueueName).ConfigureAwait(false);

@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Castle.DynamicProxy;
 using ServiceDisc.Models;
+using ServiceDisc.Networking.ServiceClients;
 using ServiceDisc.Networking.ServiceDiscConnection;
 using ServiceDisc.Serialization;
 
@@ -17,6 +20,10 @@ namespace ServiceDisc.Networking.QueueService
 
         public async Task CallServiceAsync(IServiceDiscConnection connection, ServiceInformation service, IInvocation invocation, CancellationToken cancellationToken)
         {
+            if (ParameterValidation.IsStreamParameter(invocation.Method.ReturnParameter)
+                    || invocation.Method.GetParameters().Any(ParameterValidation.IsStreamParameter))
+                throw new NotSupportedException($"{nameof(Stream)} parameter isn't supported for {nameof(QueueServiceClient)} currently.");
+
             var queueName = service.Address;
             var parameters = BuildParameterDictionary(invocation);
 

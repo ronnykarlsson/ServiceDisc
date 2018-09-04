@@ -1,9 +1,10 @@
+using System.IO;
 using Microsoft.AspNetCore.Http;
 
 namespace ServiceDisc.Networking.WebApi
 {
     public interface IWebApiServiceCaller
     {
-        string Call(string methodName, IQueryCollection requestQuery);
+        object Call(string methodName, IQueryCollection requestQuery, Stream stream = null);
     }
 }

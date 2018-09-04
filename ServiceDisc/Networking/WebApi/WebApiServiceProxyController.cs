@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace ServiceDisc.Networking.WebApi
 {
@@ -17,15 +16,18 @@ namespace ServiceDisc.Networking.WebApi
         }
 
         [HttpGet("{method}")]
-        public string Get(string method)
+        public ActionResult Get(string method)
         {
             var result = _webApiServiceCaller.Call(method, Request.Query);
-            return result;
+            return Ok(result);
         }
 
-        public override void OnActionExecuting(ActionExecutingContext context)
+        [HttpPost("{method}")]
+        public ActionResult Post(string method)
         {
-            base.OnActionExecuting(context);
+            var stream = Request.Body;
+            var result = _webApiServiceCaller.Call(method, Request.Query, stream);
+            return Ok(result);
         }
     }
 }
