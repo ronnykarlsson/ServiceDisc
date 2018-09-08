@@ -13,4 +13,14 @@ namespace ServiceDisc.Serialization
             Deserialize = deserialize;
         }
     }
+
+    public class TypeSerialization<T> : TypeSerialization
+    {
+        public Func<T, string> Serialize { get; }
+
+        public TypeSerialization(Func<T, string> serialize, Func<string, object> deserialize) : base(typeof(T), deserialize)
+        {
+            Serialize = serialize;
+        }
+    }
 }

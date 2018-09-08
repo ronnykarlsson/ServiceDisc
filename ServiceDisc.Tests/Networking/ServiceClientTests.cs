@@ -48,13 +48,14 @@ namespace ServiceDisc.Tests.Networking
         }
 
         [Theory]
-        [InlineData(0)]
-        [InlineData(1)]
+        [InlineData(0f)]
+        [InlineData(1f)]
         [InlineData(1.2f)]
         [InlineData(float.Epsilon)]
         [InlineData(float.NaN)]
         [InlineData(float.NegativeInfinity)]
         [InlineData(float.PositiveInfinity)]
+        [InlineData(float.MaxValue/2 - float.Epsilon)]
         [InlineData(float.MaxValue)]
         [InlineData(float.MinValue)]
         public void EchoFloatNumbers(float input)
@@ -73,6 +74,7 @@ namespace ServiceDisc.Tests.Networking
         [InlineData(double.NaN)]
         [InlineData(double.NegativeInfinity)]
         [InlineData(double.PositiveInfinity)]
+        [InlineData(double.MaxValue/2 - double.Epsilon)]
         [InlineData(double.MaxValue)]
         [InlineData(double.MinValue)]
         public void EchoDoubleNumbers(double input)

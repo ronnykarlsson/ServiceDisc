@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Newtonsoft.Json;
 
 namespace ServiceDisc.Serialization
@@ -10,13 +11,13 @@ namespace ServiceDisc.Serialization
 
         static TypeSerializer()
         {
-            Add(new TypeSerialization(typeof(string), i => i));
-            Add(new TypeSerialization(typeof(bool), i => Convert.ToBoolean(i)));
-            Add(new TypeSerialization(typeof(int), i => Convert.ToInt32(i)));
-            Add(new TypeSerialization(typeof(long), i => Convert.ToInt64(i)));
-            Add(new TypeSerialization(typeof(float), i => Convert.ToSingle(i)));
-            Add(new TypeSerialization(typeof(double), i => Convert.ToDouble(i)));
-            Add(new TypeSerialization(typeof(decimal), i => Convert.ToDecimal(i)));
+            Add(new TypeSerialization<string>(i => i, i => i));
+            Add(new TypeSerialization<bool>(i => i.ToString(CultureInfo.InvariantCulture), i => Convert.ToBoolean(i, CultureInfo.InvariantCulture)));
+            Add(new TypeSerialization<int>(i => i.ToString(CultureInfo.InvariantCulture), i => Convert.ToInt32(i, CultureInfo.InvariantCulture)));
+            Add(new TypeSerialization<long>(i => i.ToString(CultureInfo.InvariantCulture), i => Convert.ToInt64(i, CultureInfo.InvariantCulture)));
+            Add(new TypeSerialization<float>(i => i.ToString("R", CultureInfo.InvariantCulture), i => Convert.ToSingle(i, CultureInfo.InvariantCulture)));
+            Add(new TypeSerialization<double>(i => i.ToString("R", CultureInfo.InvariantCulture), i => Convert.ToDouble(i, CultureInfo.InvariantCulture)));
+            Add(new TypeSerialization<decimal>(i => i.ToString(CultureInfo.InvariantCulture), i => Convert.ToDecimal(i, CultureInfo.InvariantCulture)));
         }
 
         static void Add(TypeSerialization serialization)
@@ -37,16 +38,30 @@ namespace ServiceDisc.Serialization
             return serialization.Deserialize(input);
         }
 
-        public string Serialize(object input)
+        public string Serialize<T>(T input)
         {
             if (input == null) return null;
+            if (typeof(T) == typeof(object) && input.GetType() != typeof(object)) return SerializeWithTypeParameter(input);
 
-            if (_conversionDictionary.ContainsKey(input.GetType()))
+            if (_conversionDictionary.TryGetValue(typeof(T), out var serialization))
             {
-                return input.ToString();
+                if (serialization is TypeSerialization<T> serializer)
+                {
+                    return serializer.Serialize(input);
+                }
+
+                throw new InvalidOperationException($"Serializer is incorrect, expected: {typeof(T).FullName}, actual: {serialization.Type.FullName}");
             }
 
             return JsonConvert.SerializeObject(input);
+        }
+
+        private string SerializeWithTypeParameter(object invocationArgument)
+        {
+            var genericMethod = typeof(TypeSerializer).GetMethod("Serialize")?.MakeGenericMethod(invocationArgument.GetType());
+            if (genericMethod == null) throw new InvalidOperationException("Serialize method required.");
+
+            return (string)genericMethod.Invoke(this, new[] { invocationArgument });
         }
     }
 }
