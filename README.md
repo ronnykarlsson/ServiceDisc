@@ -1,8 +1,10 @@
 # ServiceDisc
 
-The purpose of ServiceDisc is to make it easier to build applications consisting of services without much infrastructure.
+ServiceDisc is a library for hosting and communicating between services. Service discovery is done through a common data collection. Each service will register in the collection when it's hosted to make it a simple process to reach it.
 
-ServiceDisc requires common storage between clients and services. Currently [Azure Storage](https://azure.microsoft.com/en-us/services/storage/) is implemented, and in-memory storage for testing. Other storage can be implemented using the ``IServiceDiscConnection`` interface which requires methods to register/unregister services and to send/receive messages.
+ServiceDisc requires common storage between clients and services. Currently [Azure Storage](https://azure.microsoft.com/en-us/services/storage/) is implemented, and in-memory storage for testing. Other storage can be implemented using the ``IServiceDiscConnection`` interface which requires methods to register/unregister services and to send/receive queue messages.
+
+There are two methods of communicating between services. Web API which will create a Web API controller to host the services, and a queue service which will listen to other services and reply through message queues. Queue service is default, this can be updated through the ``ServiceDiscClient.ServiceHostFactory`` property (setting it to ``WebApiServiceHostFactory`` will host the services with Web API instead).
 
 ## Installing from [NuGet](https://www.nuget.org/packages/ServiceDisc/)
 
